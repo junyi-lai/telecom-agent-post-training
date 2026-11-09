@@ -1,0 +1,294 @@
+diff --git a/verl/experimental/agent_loop/tool_parser.py b/verl/experimental/agent_loop/tool_parser.py
+index 084dfcf..f72a60d 100644
+--- a/verl/experimental/agent_loop/tool_parser.py
++++ b/verl/experimental/agent_loop/tool_parser.py
+@@ -215,9 +215,31 @@ class Qwen3XMLToolParser(ToolParser):
+ 
+         def get_arguments_config(func_name: str) -> dict:
+             for config in tools:
+-                if config.type == "function" and config.function.name == func_name:
++                if isinstance(config, dict):
++                    function = config.get("function") or {}
++                    if (
++                        config.get("type") == "function"
++                        and function.get("name") == func_name
++                    ):
++                        parameters = function.get("parameters") or {}
++                        properties = parameters.get("properties") or {}
++                        return {
++                            key: (
++                                value.model_dump()
++                                if hasattr(value, "model_dump")
++                                else value
++                            )
++                            for key, value in properties.items()
++                        }
++                elif (
++                    config.type == "function"
++                    and config.function.name == func_name
++                ):
+                     properties = config.function.parameters.properties
+-                    return {k: v.model_dump() for k, v in properties.items()}
++                    return {
++                        key: value.model_dump()
++                        for key, value in properties.items()
++                    }
+             logger.warning(f"Tool '{func_name}' is not defined in the tools list.")
+             return {}
+ 
+diff --git a/verl/trainer/ppo/v1/trainer_base.py b/verl/trainer/ppo/v1/trainer_base.py
+index b25b6be..3b04b78 100644
+--- a/verl/trainer/ppo/v1/trainer_base.py
++++ b/verl/trainer/ppo/v1/trainer_base.py
+@@ -1912,8 +1912,26 @@ class PPOTrainer(ABC):
+         prompt_length = data["prompts"].offsets().diff()
+         response_length = data["responses"].offsets().diff()
+         global_token_num = (prompt_length + response_length).tolist()
+-        min_global_steps = np.array([tag["min_global_steps"] for tag in batch.tags], dtype=int)[non_padding_mask]
+-        max_global_steps = np.array([tag["max_global_steps"] for tag in batch.tags], dtype=int)[non_padding_mask]
++        # Synthetic padding tags intentionally carry null step bounds. Filter
++        # those rows before converting the remaining values to integers.
++        min_global_steps = np.asarray(
++            [
++                tag["min_global_steps"]
++                if tag["min_global_steps"] is not None
++                else global_steps
++                for tag in batch.tags
++            ],
++            dtype=object,
++        )[non_padding_mask].astype(np.int64)
++        max_global_steps = np.asarray(
++            [
++                tag["max_global_steps"]
++                if tag["max_global_steps"] is not None
++                else global_steps
++                for tag in batch.tags
++            ],
++            dtype=object,
++        )[non_padding_mask].astype(np.int64)
+ 
+         # Only fetch speculative decoding stats when rollout writes them.
+         spec_drafts = spec_accepts = spec_verifies = None
+diff --git a/verl/utils/dataset/multiturn_sft_dataset.py b/verl/utils/dataset/multiturn_sft_dataset.py
+index bbcfae4..ea43072 100644
+--- a/verl/utils/dataset/multiturn_sft_dataset.py
++++ b/verl/utils/dataset/multiturn_sft_dataset.py
+@@ -60,7 +60,13 @@ def print_assembled_message(tokenizer, message_list, input_ids, loss_mask, attn_
+     Print the message after applying the chat template
+     """
+ 
+-    tokenized = tokenizer.apply_chat_template(message_list, add_generation_prompt=False, tokenize=False, tools=tools)
++    tokenized = apply_chat_template(
++        tokenizer,
++        message_list,
++        add_generation_prompt=False,
++        tokenize=False,
++        tools=tools,
++    )
+     sep = "\n\n"
+     str = f"tokenized entire message:\n{tokenized}"
+     str += sep
+@@ -430,7 +436,8 @@ class MultiTurnSFTDataset(Dataset):
+         apply_chat_template_kwargs = {**self.apply_chat_template_kwargs}
+         if enable_thinking is not None:
+             apply_chat_template_kwargs["enable_thinking"] = enable_thinking
+-        inputs = processor.apply_chat_template(
++        inputs = apply_chat_template(
++            processor,
+             messages,
+             tools=tools,
+             add_generation_prompt=False,
+diff --git a/verl/utils/dataset/rl_dataset.py b/verl/utils/dataset/rl_dataset.py
+index aad0655..8c8f033 100644
+--- a/verl/utils/dataset/rl_dataset.py
++++ b/verl/utils/dataset/rl_dataset.py
+@@ -34,6 +34,7 @@ from transformers import PreTrainedTokenizer, ProcessorMixin
+ 
+ from verl.utils.import_utils import load_extern_object
+ from verl.utils.tokenizer import build_multimodal_processor_inputs, normalize_token_ids
++from verl.utils.tokenizer.chat_template import apply_chat_template
+ 
+ logger = logging.getLogger(__name__)
+ 
+@@ -211,8 +212,12 @@ class RLHFDataset(Dataset):
+                         if self.tool_schemas is not None:
+                             apply_kwargs["tools"] = self.tool_schemas
+ 
+-                        raw_prompt = self.processor.apply_chat_template(
+-                            messages, add_generation_prompt=True, tokenize=False, **apply_kwargs
++                        raw_prompt = apply_chat_template(
++                            self.processor,
++                            messages,
++                            add_generation_prompt=True,
++                            tokenize=False,
++                            **apply_kwargs,
+                         )
+                         images, videos, audios = self._process_multi_modal_info(
+                             messages, self.image_patch_size, self.config
+@@ -256,8 +261,12 @@ class RLHFDataset(Dataset):
+                         apply_kwargs.pop("return_dict", None)
+                         apply_kwargs.pop("return_tensors", None)
+ 
+-                        tokenized_prompt = tokenizer.apply_chat_template(
+-                            doc[prompt_key], add_generation_prompt=True, tokenize=True, **apply_kwargs
++                        tokenized_prompt = apply_chat_template(
++                            tokenizer,
++                            doc[prompt_key],
++                            add_generation_prompt=True,
++                            tokenize=True,
++                            **apply_kwargs,
+                         )
+                         return len(normalize_token_ids(tokenized_prompt))
+                     except Exception:
+diff --git a/verl/utils/tokenizer/chat_template.py b/verl/utils/tokenizer/chat_template.py
+index 5dc48d2..fd98727 100644
+--- a/verl/utils/tokenizer/chat_template.py
++++ b/verl/utils/tokenizer/chat_template.py
+@@ -1,7 +1,10 @@
+ # Copyright 2025 Bytedance Ltd. and/or its affiliates
++import copy
++import json
+ import logging
+ import os
+ 
++import torch
+ from transformers import PreTrainedTokenizerBase, ProcessorMixin
+ 
+ from .tokenizer import normalize_token_ids
+@@ -163,9 +166,22 @@ def apply_chat_template(
+     Returns:
+         list[int] | str: tokenized ids or text string.
+     """
++    resolved_messages = copy.deepcopy(messages)
++    for message in resolved_messages:
++        for tool_call in message.get("tool_calls") or []:
++            function = tool_call.get("function")
++            if not isinstance(function, dict):
++                continue
++            arguments = function.get("arguments")
++            if isinstance(arguments, str):
++                try:
++                    function["arguments"] = json.loads(arguments)
++                except json.JSONDecodeError:
++                    pass
++
+     try:
+         return processor.apply_chat_template(
+-            messages,
++            resolved_messages,
+             tokenize=tokenize,
+             add_generation_prompt=add_generation_prompt,
+             tools=tools,
+@@ -175,6 +191,15 @@ def apply_chat_template(
+     except Exception:
+         # Qwen3.5 apply_chat_template needs messages with at least one user message
+         dummy_user_message = [{"role": "user", "content": [{"type": "text", "text": ""}]}]
++        # If the input contains only a system message, a prefix-based fallback would
++        # place that system message after the dummy user and fail. Render the
++        # system first, then remove the matching dummy suffix.
++        dummy_is_suffix = len(resolved_messages) == 1 and resolved_messages[0].get("role") == "system"
++        combined_messages = (
++            resolved_messages + dummy_user_message
++            if dummy_is_suffix
++            else dummy_user_message + resolved_messages
++        )
+         dummy_user_prefix = processor.apply_chat_template(
+             dummy_user_message,
+             tokenize=tokenize,
+@@ -183,8 +208,18 @@ def apply_chat_template(
+             return_dict=return_dict,
+             **kwargs,
+         )
++        generation_suffix = None
++        if dummy_is_suffix and add_generation_prompt:
++            generation_suffix = processor.apply_chat_template(
++                dummy_user_message,
++                tokenize=tokenize,
++                add_generation_prompt=True,
++                tools=tools,
++                return_dict=return_dict,
++                **kwargs,
++            )
+         output = processor.apply_chat_template(
+-            dummy_user_message + messages,
++            combined_messages,
+             tokenize=tokenize,
+             add_generation_prompt=add_generation_prompt,
+             tools=tools,
+@@ -193,19 +228,72 @@ def apply_chat_template(
+         )
+ 
+         if not tokenize:  # tokenize=False
++            if dummy_is_suffix:
++                generation = ""
++                if generation_suffix is not None:
++                    generation = generation_suffix[len(dummy_user_prefix) :]
++                cut = len(dummy_user_prefix) + len(generation)
++                return output[:-cut] + generation if cut else output
+             return output[len(dummy_user_prefix) :]
+         elif not return_dict:  # tokenize=True and return_dict=False
++            generation = []
++            if isinstance(generation_suffix, list) and generation_suffix and isinstance(
++                generation_suffix[0], list
++            ):
++                assert len(generation_suffix) == 1
++                generation_suffix = generation_suffix[0]
++            if isinstance(dummy_user_prefix, list) and dummy_user_prefix and isinstance(
++                dummy_user_prefix[0], list
++            ):
++                assert len(dummy_user_prefix) == 1
++                dummy_user_prefix = dummy_user_prefix[0]
+             if isinstance(output[0], list):  # transformers>=5
+                 assert len(output) == 1, "output must be a list[int] or list[list[int]]"
+-                dummy_user_prefix = dummy_user_prefix[0]
+                 output = output[0]
++            if dummy_is_suffix:
++                if generation_suffix is not None:
++                    generation = generation_suffix[len(dummy_user_prefix) :]
++                cut = len(dummy_user_prefix) + len(generation)
++                return output[:-cut] + generation if cut else output
+             return output[len(dummy_user_prefix) :]
+         else:  # tokenize=True and return_dict=True and return_tensors="pt"
+             dummy_user_prefix = dict(dummy_user_prefix)
+             output = dict(output)
+             prefix_len = dummy_user_prefix["input_ids"].shape[1]
+-            output["input_ids"] = output["input_ids"][:, prefix_len:]
+-            output["attention_mask"] = output["attention_mask"][:, prefix_len:]
++            generation_len = 0
++            if generation_suffix is not None:
++                generation_suffix = dict(generation_suffix)
++                generation_len = generation_suffix["input_ids"].shape[1] - prefix_len
++            if dummy_is_suffix:
++                cut = prefix_len + generation_len
++                generation_ids = output["input_ids"][:, -generation_len:] if generation_len else None
++                generation_masks = (
++                    output["attention_mask"][:, -generation_len:] if generation_len else None
++                )
++                output["input_ids"] = output["input_ids"][:, :-cut]
++                output["attention_mask"] = output["attention_mask"][:, :-cut]
++                if generation_ids is not None:
++                    output["input_ids"] = torch.cat(
++                        [output["input_ids"], generation_ids], dim=1
++                    )
++                    output["attention_mask"] = torch.cat(
++                        [output["attention_mask"], generation_masks], dim=1
++                    )
++            else:
++                output["input_ids"] = output["input_ids"][:, prefix_len:]
++                output["attention_mask"] = output["attention_mask"][:, prefix_len:]
+             if "mm_token_type_ids" in output:
+-                output["mm_token_type_ids"] = output["mm_token_type_ids"][:, prefix_len:]
++                if dummy_is_suffix:
++                    generation_types = (
++                        output["mm_token_type_ids"][:, -generation_len:]
++                        if generation_len
++                        else None
++                    )
++                    output["mm_token_type_ids"] = output["mm_token_type_ids"][:, :-cut]
++                    if generation_types is not None:
++                        output["mm_token_type_ids"] = torch.cat(
++                            [output["mm_token_type_ids"], generation_types], dim=1
++                        )
++                else:
++                    output["mm_token_type_ids"] = output["mm_token_type_ids"][:, prefix_len:]
+             return output

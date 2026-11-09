@@ -1,0 +1,20 @@
+diff --git a/verl/trainer/ppo/v1/trainer_base.py b/verl/trainer/ppo/v1/trainer_base.py
+index b25b6be..0e297cb 100644
+--- a/verl/trainer/ppo/v1/trainer_base.py
++++ b/verl/trainer/ppo/v1/trainer_base.py
+@@ -448,6 +448,15 @@ class PPOTrainer(ABC):
+                 self._shutdown_dump_executor()
+                 return
+ 
++        if os.getenv("VERL_EXPORT_CHECKPOINT_AT_START", "0") == "1":
++            logger.info(
++                "Export-only mode: save the resumed checkpoint without another optimizer step."
++            )
++            self._save_checkpoint()
++            self._shutdown_dump_executor()
++            self._shutdown_train_dataloader()
++            return
++
+         current_epoch = self.global_steps // self.steps_per_epoch
+         progress_bar = tqdm(total=self.total_training_steps, initial=self.global_steps, desc="Training Progress")
+ 

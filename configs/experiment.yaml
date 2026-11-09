@@ -1,0 +1,127 @@
+project:
+  name: telecom-agent-post-training
+  seed: 20261103
+
+environment:
+  repository: https://github.com/sierra-research/tau2-bench
+  commit: 19f13ea3f5fba8b4c4d272d1353590f29dc53062
+  domain: telecom
+  policy_type: manual
+
+student:
+  model: Qwen/Qwen3.5-2B
+  revision: 15852e8c16360a2fea060d615a32b45270f8a8fc
+  deployment: vllm
+  served_model_name: student
+  enable_thinking: false
+  max_context_length: 32768
+  max_tokens_per_turn: 256
+  max_turns: 30
+  rollout_concurrency: 8
+
+deepseek:
+  provider: deepseek
+  transport: https_or_explicit_insecure_http_override
+  allow_insecure_public_http: false
+  max_concurrency_per_process: 2
+  min_concurrency_per_process: 1
+  global_concurrency_limit: 32
+  gate_scope: process
+  fallback:
+    transport: https
+    max_concurrency_per_process: 4
+    min_concurrency_per_process: 2
+    global_concurrency_limit: 4
+    fuse_status_codes: [401, 402, 403]
+    fuse_seconds: 3600
+  adaptive_concurrency: true
+  adaptive_cooldown_seconds: 2
+  successes_before_ramp: 8
+  request_timeout_seconds: 20
+  max_retries: 5
+  retry_base_seconds: 0.1
+  retry_jitter_ratio: 0.25
+  retry_max_seconds: 1
+  total_request_deadline_seconds: 60
+  logging_level: WARNING
+  user_simulator:
+    model: ${DEEPSEEK_MODEL}
+    temperature: 0.7
+    max_tokens: 256
+    seed: 42
+  teacher:
+    model: ${DEEPSEEK_TEACHER_MODEL}
+    temperature: 0.2
+    seed: 43
+    max_steps: 60
+
+runtime:
+  inference:
+    python: "3.12"
+    pytorch: "2.11.0+cu130"
+    vllm: "0.25.1"
+    gpu_memory_gb: 16
+  training:
+    verl_commit: 184687bb3b7c601627eed3660283ecabd2bb75ed
+    vllm: "0.32.0"
+    gpu_memory_gb: 96
+    profile: configs/profiles/96gb.env
+
+data:
+  smoke_tasks: 5
+  official_train_tasks: 64
+  dev_tasks: 10
+  expanded_train_tasks: 100
+  test_tasks: 40
+  rollouts_per_train_task: 4
+  initial_train_rollouts: 656
+  sft_assistant_tokens_per_arm: 160000
+  sft_required_task_coverage: 164
+  sft_two_stage_selection: true
+  sft_max_examples_per_task: 2
+  deduplicate_exact_message_trajectories: true
+  rl_uniform_prompt_rows: 164
+  rl_failure_aware_prompt_rows: 328
+  final_eval_rollouts_per_model: 120
+  final_test_seeds: 3
+  paired_bootstrap_samples: 10000
+
+training:
+  method: lora_sft_then_grpo
+  seed: 20261103
+  lora_rank: 32
+  lora_alpha: 64
+  lora_dropout: 0.05
+  sft_learning_rate: 0.0001
+  sft_train_batch_size: 8
+  sft_micro_batch_size_per_gpu: 4
+  sft_max_token_len_per_gpu: 65536
+  sft_max_length: 32768
+  sft_epochs: 2
+  sft_save_freq_steps: 25
+  grpo_learning_rate: 0.00001
+  grpo_group_size: 8
+  grpo_steps: 75
+  grpo_mini_batch_size: 8
+  grpo_micro_batch_size_per_gpu: 4
+  grpo_logprob_micro_batch_size_per_gpu: 4
+  grpo_param_offload: false
+  grpo_optimizer_offload: false
+  vllm_gpu_memory_utilization: 0.50
+  vllm_max_num_seqs: 128
+  agent_workers: 16
+  grpo_max_inflight_gen_batches: 1
+  tau2_max_active_rollouts_per_worker: 2
+  reference_kl_coefficient: 0.001
+
+reward:
+  strict_success: 1.0
+  assertion_progress: 0.1
+  policy_violation: -0.25
+  invalid_tool_per_call: -0.02
+  invalid_tool_cap: -0.1
+  repeated_action_per_call: -0.01
+  repeated_action_cap: -0.1
+  premature_exit: -0.2
+  minimum: -0.5
+  maximum: 1.1

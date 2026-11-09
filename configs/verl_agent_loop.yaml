@@ -1,0 +1,2 @@
+- name: tau2_telecom
+  _target_: telecom_post_training.verl_agent_loop.Tau2TelecomAgentLoop

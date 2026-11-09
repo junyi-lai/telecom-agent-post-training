@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+*.parquet binary
+*.safetensors binary
+*.pyc binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+*.zip binary
+*.gz binary

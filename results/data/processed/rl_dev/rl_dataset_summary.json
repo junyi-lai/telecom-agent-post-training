@@ -1,0 +1,35 @@
+{
+  "task_split": "dev",
+  "tasks": 10,
+  "tasks_with_baseline_stats": 164,
+  "uniform_rows": 10,
+  "failure_aware_rows": 20,
+  "uniform_unique_tasks": 10,
+  "failure_aware_unique_tasks": 10,
+  "uniform_task_occurrence_distribution": {
+    "1": 10
+  },
+  "failure_aware_task_occurrence_distribution": {
+    "1": 3,
+    "2": 5,
+    "3": 1,
+    "4": 1
+  },
+  "failure_aware_extra_rows": 10,
+  "failure_aware_task_occurrences": {
+    "[mms_issue]airplane_mode_on|bad_network_preference|bad_wifi_calling|break_app_storage_permission|data_mode_off|data_usage_exceeded|unseat_sim_card|user_abroad_roaming_enabled_off[PERSONA:Hard]": 1,
+    "[mms_issue]airplane_mode_on|bad_network_preference|break_apn_mms_setting|data_mode_off|unseat_sim_card|user_abroad_roaming_disabled_off[PERSONA:Easy]": 2,
+    "[mms_issue]airplane_mode_on|bad_network_preference|break_apn_mms_setting|data_usage_exceeded[PERSONA:Hard]": 2,
+    "[mms_issue]break_app_storage_permission|data_usage_exceeded[PERSONA:Easy]": 2,
+    "[mobile_data_issue]airplane_mode_on|bad_network_preference|bad_vpn|data_mode_off|data_saver_mode_on|data_usage_exceeded|user_abroad_roaming_disabled_on[PERSONA:None]": 4,
+    "[mobile_data_issue]airplane_mode_on|bad_network_preference|bad_vpn|data_saver_mode_on|data_usage_exceeded|user_abroad_roaming_enabled_off[PERSONA:None]": 2,
+    "[mobile_data_issue]bad_network_preference|data_saver_mode_on|data_usage_exceeded[PERSONA:Hard]": 2,
+    "[mobile_data_issue]data_mode_off|data_usage_exceeded|user_abroad_roaming_disabled_off[PERSONA:Hard]": 3,
+    "[service_issue]airplane_mode_on|lock_sim_card_pin|overdue_bill_suspension|unseat_sim_card[PERSONA:Easy]": 1,
+    "[service_issue]break_apn_settings|lock_sim_card_pin|overdue_bill_suspension|unseat_sim_card[PERSONA:Easy]": 1
+  },
+  "paths": {
+    "uniform": "<repo>/results/data/processed/rl_dev/rl_uniform.parquet",
+    "failure_aware": "<repo>/results/data/processed/rl_dev/rl_failure_aware.parquet"
+  }
+}

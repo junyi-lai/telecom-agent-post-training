@@ -1,0 +1,51 @@
+diff --git a/verl/trainer/ppo/v1/agent_loop_tq.py b/verl/trainer/ppo/v1/agent_loop_tq.py
+index c078e63..214a730 100644
+--- a/verl/trainer/ppo/v1/agent_loop_tq.py
++++ b/verl/trainer/ppo/v1/agent_loop_tq.py
+@@ -33,6 +33,7 @@ from verl.experimental.agent_loop import (
+ )
+ from verl.utils.ray_utils import auto_await
+ from verl.utils.tensordict_utils import list_of_dict_to_tensordict
++from telecom_flywheel.rollout_runtime import round_robin_slice
+ 
+ logger = logging.getLogger(__name__)
+ logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "INFO"))
+@@ -235,6 +236,7 @@ class AgentLoopWorkerTQ(AgentLoopWorker):
+ class AgentLoopManagerTQ(AgentLoopManager):
+     def __init__(self, *args, **kwargs):
+         self.agent_loop_workers_class = AgentLoopWorkerTQ
++        self._next_worker_index = 0
+         super().__init__(*args, **kwargs)
+ 
+     @classmethod
+@@ -245,6 +247,18 @@ class AgentLoopManagerTQ(AgentLoopManager):
+         await instance._init_agent_loop_workers()
+         return instance
+ 
++    def _select_workers(self, count: int) -> list[Any]:
++        """Return a contiguous round-robin slice of the worker pool."""
++        workers = self.agent_loop_workers
++        if not workers or count <= 0:
++            return []
++        selected, self._next_worker_index = round_robin_slice(
++            workers,
++            count,
++            self._next_worker_index,
++        )
++        return selected
++
+     def generate_sequences(self, prompts: TensorDict) -> None:
+         """
+         Dispatch input batch to agent loop workers without blocking. Workers should put agent loop outputs
+@@ -254,9 +268,10 @@ class AgentLoopManagerTQ(AgentLoopManager):
+             prompts (TensorDict): Input batch from train or validation dataset.
+         """
+         chunkes = prompts.chunk(len(self.agent_loop_workers))
++        workers = self._select_workers(len(chunkes))
+         ray.get(
+             [
+                 worker.generate_sequences.remote(chunk)
+-                for worker, chunk in zip(self.agent_loop_workers, chunkes, strict=False)
++                for worker, chunk in zip(workers, chunkes, strict=False)
+             ]
+         )

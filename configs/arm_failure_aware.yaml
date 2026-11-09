@@ -1,0 +1,30 @@
+arm: failure_aware
+description: Cover every task, then add second rows by failure-bucket rotation.
+dataset: results/data/processed/sft/sft_failure_aware.jsonl
+budget:
+  assistant_tokens: 160000
+  optimizer_steps: 75
+sampling:
+  first_pass: one_success_per_required_task
+  second_pass: failure_bucket_round_robin
+  exclude_uniform_second_pass: true
+  required_task_count: 164
+  max_examples_per_task: 2
+  bucket_and_final_cap: true
+  deduplicate_exact_message_trajectories: true
+rl_prompts:
+  unique_task_coverage: 164
+  rows: 328
+  coverage_rows: 164
+  weighted_extra_rows: 164
+bucket_weights:
+  success: 40
+  invalid_tool_call: 12
+  repetition: 12
+  wrong_action_or_policy: 12
+  incomplete_state: 12
+  premature_exit: 12
+  max_steps: 12
+  response_truncated: 6
+  agent_error: 6
+  generic_failure: 6

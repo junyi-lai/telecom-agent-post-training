@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="480" viewBox="0 0 1200 480" role="img" aria-labelledby="title desc">
+<title id="title">两阶段SFT采样</title><desc id="desc">共享164条覆盖示范，普通组再随机选63条，失败感知组选61条，两组均约160K助手token。</desc><rect width="1200" height="480" fill="#f8fafc"/>
+<g font-family="'Noto Sans CJK SC','Microsoft YaHei',sans-serif" fill="#17272b"><text x="48" y="53" font-size="28" font-weight="700">先覆盖所有任务，再分配剩余预算</text><text x="48" y="86" font-size="16" fill="#5c6b70">164 个任务，每任务先选 1 条成功示范；每任务最多 2 条</text>
+<rect x="48" y="118" width="1104" height="68" rx="6" fill="#e2eeeb"/><text x="72" y="147" font-size="19" font-weight="700">第一阶段 · 两组相同</text><text x="72" y="173" font-size="16" fill="#45625d">164 条全覆盖示范，约 100.7K 共享 assistant tokens</text>
+<path d="M600 186V210M600 210H310V234M600 210H890V234" fill="none" stroke="#79888b" stroke-width="2"/>
+<rect x="48" y="235" width="528" height="178" rx="8" fill="white" stroke="#cbd5e1"/><rect x="624" y="235" width="528" height="178" rx="8" fill="white" stroke="#9bc6bd"/>
+<text x="72" y="270" font-size="22" font-weight="700" fill="#5266a5">普通组 · 稳定随机选择</text><text x="648" y="270" font-size="22" font-weight="700" fill="#138075">失败感知组 · 失败类型轮转</text>
+<g font-size="17" fill="#5c6b70"><text x="72" y="304">第二阶段增加 63 条独有示范</text><text x="648" y="304">第二阶段增加 61 条独有示范</text><text x="648" y="331">排除普通组已选的第二条轨迹</text></g>
+<rect x="72" y="350" width="292" height="16" rx="3" fill="#c8ddd6"/><rect x="364" y="350" width="171" height="16" rx="3" fill="#7183b7"/><rect x="648" y="350" width="292" height="16" rx="3" fill="#c8ddd6"/><rect x="940" y="350" width="171" height="16" rx="3" fill="#138075"/>
+<g font-size="17" font-weight="700"><text x="72" y="394">227 条 · 159,949 tokens</text><text x="648" y="394">225 条 · 159,960 tokens</text></g><text x="48" y="452" font-size="15" fill="#5c6b70">色条按 token 预算示意：约 63% 共享，约 37% 差异。比较重点是增量数据如何分配。</text></g></svg>

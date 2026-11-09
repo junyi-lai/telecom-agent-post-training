@@ -1,0 +1,78 @@
+{
+  "records": 966,
+  "strict_success_records": 388,
+  "available_examples": 388,
+  "available_assistant_tokens": 313578,
+  "available_total_context_tokens": 3003237,
+  "available_failure_buckets": {
+    "agent_error": 0,
+    "generic_failure": 0,
+    "incomplete_state": 0,
+    "invalid_tool_call": 38,
+    "max_steps": 300,
+    "premature_exit": 0,
+    "repetition": 14,
+    "response_truncated": 0,
+    "success": 36,
+    "wrong_action_or_policy": 0
+  },
+  "target_assistant_tokens": 160000,
+  "max_examples_per_task": 2,
+  "required_task_count": 164,
+  "context_sha256": "97a97918b003f54080959a6a065ad0fac6eb951fa5d03940f684c1a4a056c8d1",
+  "arms": {
+    "uniform": {
+      "examples": 227,
+      "assistant_tokens": 159949,
+      "unique_tasks": 164,
+      "uncovered_task_count": 0,
+      "uncovered_tasks": [],
+      "task_count_distribution": {
+        "1": 101,
+        "2": 63
+      },
+      "max_examples_per_task": 2,
+      "duplicate_message_trajectory_rows": 0,
+      "duplicate_example_id_rows": 0,
+      "failure_buckets": {
+        "invalid_tool_call": 22,
+        "max_steps": 182,
+        "repetition": 10,
+        "success": 13
+      },
+      "path": "<repo>/results/data/processed/sft/sft_uniform.jsonl",
+      "parquet_path": "<repo>/results/data/processed/sft/sft_uniform.parquet"
+    },
+    "failure_aware": {
+      "examples": 225,
+      "assistant_tokens": 159960,
+      "unique_tasks": 164,
+      "uncovered_task_count": 0,
+      "uncovered_tasks": [],
+      "task_count_distribution": {
+        "1": 103,
+        "2": 61
+      },
+      "max_examples_per_task": 2,
+      "duplicate_message_trajectory_rows": 0,
+      "duplicate_example_id_rows": 0,
+      "failure_buckets": {
+        "invalid_tool_call": 25,
+        "max_steps": 172,
+        "repetition": 10,
+        "success": 18
+      },
+      "path": "<repo>/results/data/processed/sft/sft_failure_aware.jsonl",
+      "parquet_path": "<repo>/results/data/processed/sft/sft_failure_aware.parquet"
+    }
+  },
+  "cross_arm": {
+    "shared_trajectories": 164,
+    "uniform_only_trajectories": 63,
+    "failure_aware_only_trajectories": 61,
+    "shared_assistant_tokens": 100734,
+    "shared_token_share_uniform": 0.6297882450030947,
+    "shared_token_share_failure_aware": 0.6297449362340585,
+    "uniform_second_pass_excluded_from_failure_aware": 63
+  }
+}

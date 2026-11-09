@@ -1,0 +1,158 @@
+project:
+  name: telecom-agent-post-training-final
+  seed: 20261103
+
+student:
+  model: Qwen/Qwen3.5-2B
+  revision: 15852e8c16360a2fea060d615a32b45270f8a8fc
+  enable_thinking: false
+  context_length: 32768
+  max_tokens_per_turn: 256
+  max_turns: 30
+
+hardware:
+  gpu_memory_gb: 96
+  profile: configs/profiles/96gb.env
+  profile_name: 96gb-fast
+
+smoke_verification:
+  default: required_marker
+  current_run: skipped_by_user
+
+runtime_compatibility:
+  python: "3.12"
+  verl_commit: 184687bb3b7c601627eed3660283ecabd2bb75ed
+  verl_patch: patches/verl-qwen35-sft-compat.patch
+  verl_patch_sha256: c147ead933d08afcfb68f7805b5463fc115c907962e577db5ebf604f153ca0ef
+  verl_round_robin_patch: patches/verl-agent-worker-round-robin.patch
+  verl_round_robin_patch_sha256: 0809f533b7bd31f39c9682bd3193a094d38afec38c082948509b85a78849c566
+  verl_export_patch: patches/verl-export-checkpoint-at-start.patch
+  verl_export_patch_sha256: 033db177ecf05243e1d9f6e5306b8ba5fab7b6514ab6af59daddd4171df00b1e
+  tau2_task_catalog: telecom/full
+
+remote_models:
+  user_simulator:
+    model: deepseek-flash
+    thinking: false
+    temperature: 0.7
+  offline_teacher:
+    model: deepseek-flash
+    thinking: true
+    temperature: 0.2
+  client:
+    transport: configured_endpoint
+    primary_endpoint: ${DEEPSEEK_BASE_URL}
+    allow_insecure_public_http: false
+    max_concurrency_per_process: 2
+    min_concurrency_per_process: 1
+    global_concurrency_limit: 32
+    gate_scope: process
+    fallback:
+      transport: https
+      max_concurrency_per_process: 4
+      min_concurrency_per_process: 2
+      global_limit: 4
+      fuse_status_codes: [401, 402, 403]
+      fuse_seconds: 3600
+    adaptive_concurrency: true
+    adaptive_cooldown_seconds: 2
+    successes_before_ramp: 8
+    request_timeout_seconds: 20
+    max_retries: 5
+    retry_base_seconds: 0.1
+    retry_jitter_ratio: 0.25
+    retry_max_seconds: 1
+    total_request_deadline_seconds: 60
+    telemetry: 429_timeout_retry_jsonl
+  logging:
+    tau2_level: WARNING
+
+data:
+  official_train_tasks: 74
+  training_tasks: 64
+  development_tasks: 10
+  expanded_training_tasks: 100
+  training_pool_tasks: 164
+  baseline_rollouts_per_task: 4
+  baseline_rollouts: 656
+  teacher_trials_per_failed_task: 2
+  frozen_test_tasks: 40
+  final_test_seeds: [300, 301, 302]
+
+sft:
+  method: lora
+  rank: 32
+  alpha: 64
+  epochs: 2
+  seed: 20261103
+  train_batch_size: 8
+  micro_batch_size_per_gpu: 4
+  max_token_len_per_gpu: 65536
+  max_length: 32768
+  save_freq_steps: 25
+  assistant_tokens_per_arm: 160000
+  two_stage_coverage:
+    first_pass: one_success_per_required_task
+    second_pass_uniform: stable_random
+    second_pass_failure_aware: failure_bucket_round_robin
+    failure_aware_excludes_uniform_second_pass: true
+  required_task_count: 164
+  max_examples_per_task: 2
+  deduplicate_exact_message_trajectories: true
+  observed_selection:
+    uncovered_tasks: 0
+    uniform_rows: 227
+    uniform_assistant_tokens: 159949
+    failure_aware_rows: 225
+    failure_aware_assistant_tokens: 159960
+    uniform_one_row_tasks: 101
+    uniform_two_row_tasks: 63
+    failure_aware_one_row_tasks: 103
+    failure_aware_two_row_tasks: 61
+    shared_trajectories: 164
+    uniform_only_trajectories: 63
+    failure_aware_only_trajectories: 61
+    shared_assistant_tokens: 100734
+    shared_token_share_per_arm: 0.63
+
+grpo:
+  optimizer_steps: 75
+  train_batch_prompts: 8
+  group_size: 8
+  learning_rate: 0.00001
+  mini_batch_size: 8
+  micro_batch_size_per_gpu: 4
+  logprob_micro_batch_size_per_gpu: 4
+  param_offload: false
+  optimizer_offload: false
+  vllm_gpu_memory_utilization: 0.50
+  vllm_max_num_seqs: 128
+  agent_workers: 16
+  max_inflight_gen_batches: 1
+  max_inflight_trajectories: 64
+  max_active_rollouts_per_worker: 2
+  max_simultaneous_rollouts: 16
+  seed: 20261103
+  data_seed: 20261103
+  rollout_seed: 20261103
+  prompt_coverage:
+    required_task_count: 164
+    uniform_rows: 164
+    failure_aware_coverage_rows: 164
+    failure_aware_weighted_extra_rows: 164
+    development_uniform_rows: 10
+    development_failure_aware_rows: 20
+    development_unique_tasks: 10
+
+evaluation:
+  checkpoint_selection_tasks: 10
+  checkpoint_selection_seeds: [200, 201, 202]
+  final_test_tasks: 40
+  final_test_seeds: [300, 301, 302]
+  trials_per_test_seed: 1
+  final_test_rollouts_per_model: 120
+  student_temperature: 0.0
+  user_simulator_temperature: 0.7
+  user_simulator_seed_source: evaluation_seed
+  statistical_cluster: task_id
+  paired_bootstrap_samples: 10000

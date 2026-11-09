@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="530" viewBox="0 0 1200 530" role="img" aria-labelledby="title desc">
+<title id="title">电信 Agent 失败驱动后训练流程</title><desc id="desc">164个任务生成656条基线轨迹，经教师纠错得到388条成功候选，进入两组SFT、GRPO和冻结评测。</desc>
+<defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#6b7280" stroke-width="1.5"/></marker></defs>
+<rect width="1200" height="530" fill="#f8fafc"/>
+<g font-family="'Noto Sans CJK SC','Microsoft YaHei',sans-serif" fill="#17272b">
+<text x="48" y="56" font-size="28" font-weight="700">把失败转化为可核验的训练数据</text><text x="48" y="88" font-size="16" fill="#5c6b70">基线采集 → 失败诊断 → 教师纠错 → SFT → GRPO → 冻结评测</text>
+<g stroke="#d5dfe2" stroke-width="1.5" fill="white"><rect x="48" y="130" width="240" height="132" rx="8"/><rect x="336" y="130" width="240" height="132" rx="8"/><rect x="624" y="130" width="240" height="132" rx="8"/><rect x="912" y="130" width="240" height="132" rx="8"/><rect x="48" y="342" width="332" height="128" rx="8"/><rect x="434" y="342" width="332" height="128" rx="8"/><rect x="820" y="342" width="332" height="128" rx="8"/></g>
+<g font-size="14" font-weight="700" fill="#138075"><text x="68" y="159">01 / BASELINE</text><text x="356" y="159">02 / DIAGNOSE</text><text x="644" y="159">03 / TEACHER</text><text x="932" y="159">04 / DATASET</text></g>
+<g font-size="22" font-weight="700"><text x="68" y="199">164 任务 × 4 次</text><text x="356" y="199">定位多轮失败</text><text x="644" y="199">教师重新执行</text><text x="932" y="199">388 条成功候选</text></g>
+<g font-size="16" fill="#5c6b70"><text x="68" y="235">收集 656 条交互轨迹</text><text x="356" y="235">状态不全 / 工具 / 重复</text><text x="644" y="235">通过环境断言才保留</text><text x="932" y="235">原生成功 + 纠错示范</text></g>
+<g stroke="#6b7280" stroke-width="2" fill="none" marker-end="url(#a)"><path d="M289 196H325"/><path d="M577 196H613"/><path d="M865 196H901"/><path d="M1032 263V300H214V330"/><path d="M381 407H422"/><path d="M767 407H808"/></g>
+<g font-size="14" font-weight="700"><text x="70" y="374" fill="#138075">05 / SFT</text><text x="456" y="374" fill="#b56538">06 / GRPO</text><text x="842" y="374" fill="#5266a5">07 / EVALUATE</text></g>
+<g font-size="22" font-weight="700"><text x="70" y="409">两组等 token 预算示范</text><text x="456" y="409">64 条轨迹 / 优化步</text><text x="842" y="409">40 任务 × 3 seeds</text></g>
+<g font-size="16" fill="#5c6b70"><text x="70" y="443">普通采样 / 失败感知采样</text><text x="456" y="443">75 步，使用环境奖励</text><text x="842" y="443">按任务簇做配对统计</text></g></g></svg>

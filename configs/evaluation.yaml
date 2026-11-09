@@ -1,0 +1,47 @@
+dataset:
+  split: test
+  task_count: 40
+  seeds: [300, 301, 302]
+  freeze: true
+
+development:
+  split: dev
+  task_count: 10
+  seeds: [200, 201, 202]
+  purpose: select_sft_checkpoint
+
+run:
+  max_steps: 100
+  max_concurrency: 8
+
+student:
+  temperature: 0.0
+
+user_simulator:
+  temperature: 0.7
+  seed_source: evaluation_seed
+
+models:
+  - name: base
+    student_model: Qwen/Qwen3.5-2B
+  - name: uniform_sft
+    student_model: tmp/checkpoints/sft_uniform
+  - name: failure_aware_sft
+    student_model: tmp/checkpoints/sft_failure_aware
+  - name: uniform_grpo
+    student_model: tmp/checkpoints/grpo_uniform/global_step_75/actor/huggingface
+  - name: failure_aware_grpo
+    student_model: tmp/checkpoints/grpo_failure_aware/global_step_75/actor/huggingface
+
+primary_metric: strict_success
+
+secondary_metrics:
+  - policy_or_action_mismatch
+  - invalid_tool_call
+  - repetition
+  - incomplete_state
+  - premature_exit
+  - average_turns
+  - average_tool_calls
+  - average_duration_seconds
+  - gpu_hours_per_success_percentage_point
